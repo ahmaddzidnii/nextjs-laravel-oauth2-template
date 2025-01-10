@@ -1,3 +1,4 @@
+import { Logout } from "@/app/components/Logout";
 import { getAuth } from "@/helpers/getAuth";
 
 export default async function DashboardPage() {
@@ -9,6 +10,8 @@ export default async function DashboardPage() {
         <pre className="mt-5 overflow-x-auto max-w-full">
           {JSON.stringify({ isAuthenticated, accsessToken: await getAccessToken(), user }, null, 2)}
         </pre>
+
+        <Logout />
       </div>
     </div>
   );
