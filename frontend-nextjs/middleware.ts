@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authMiddleware } from "@/helpers/authMiddleware";
-import { createRouteMatcher } from "./helpers/createRouteMacther";
+import { createRouteMatcher } from "./helpers/createRouteMatcher";
 
 export default authMiddleware(async (auth, req) => {
   const isPublicRoutes = createRouteMatcher(["/", "/login(.*)"]);

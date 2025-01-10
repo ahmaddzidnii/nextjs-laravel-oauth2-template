@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { createRouteMatcher } from "@/helpers/createRouteMacther";
+import { createRouteMatcher } from "@/helpers/createRouteMatcher";
 
 describe("createRouteMatcher", () => {
   it("matches exact patterns", () => {
