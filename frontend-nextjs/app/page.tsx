@@ -1,5 +1,11 @@
-import { getAuth } from "@/helpers/getAuth";
 import Link from "next/link";
+
+import { getAuth } from "@/helpers/getAuth";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Home",
+};
 
 export default async function Home() {
   const { isAuthenticated, user, getAccessToken } = await getAuth();

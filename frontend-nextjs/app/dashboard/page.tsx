@@ -1,5 +1,15 @@
-import { Logout } from "@/app/components/Logout";
+import { Metadata } from "next";
+
 import { getAuth } from "@/helpers/getAuth";
+import { Logout } from "@/app/components/Logout";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const auth = await getAuth();
+
+  return {
+    title: `${auth.user?.username} Dashboard`,
+  };
+}
 
 export default async function DashboardPage() {
   const { isAuthenticated, user, getAccessToken } = await getAuth();
