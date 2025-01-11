@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\ResponseHelper;
-use App\Models\BlacklistedToken;
-use App\Models\User;
-use App\Services\AuthService;
-use App\Traits\ApiResponseHelper;
 use Carbon\Carbon;
+use App\Models\User;
 use Illuminate\Http\Request;
+use App\Services\AuthService;
+use App\Models\BlacklistedToken;
+use App\Traits\ApiResponseHelper;
 use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
@@ -57,43 +56,39 @@ class AuthController extends Controller
     public function refresh(Request $request)
     {
         try {
+            // Get refresh token from cookie, bearer token, or query string
             $refreshToken = $request->cookie('refresh_token') ?? $request->bearerToken() ?? $request->query('refresh_token');
 
             if (!$refreshToken) {
-                return response()->json(ResponseHelper::error('Token tidak diberikan', [], 401), 401);
+                return $this->errorResponse("Token tidak diberikan", 401);
             }
 
+            // Validate refresh token
             $validatedRefreshToken = $this->authService->validateToken($refreshToken);
 
             if (!$validatedRefreshToken['valid']) {
-                return response()->json(ResponseHelper::error($validatedRefreshToken['message'], [], $validatedRefreshToken['status']), $validatedRefreshToken['status']);
+                return $this->errorResponse($validatedRefreshToken['message'], $validatedRefreshToken['status']);
             }
 
-
-
+            // Check user refresh token in database
             $user = User::whereHas('sessions', function ($query) use ($refreshToken) {
                 $query->where('refresh_token', $refreshToken);
             })->first();
 
             if (!$user) {
-                return response()->json(ResponseHelper::error('Token tidak valid', [], 401), 401);
+                return $this->errorResponse('Token tidak valid', 401);
             }
 
             $newAccessToken = $this->authService->claimsJWT($user, Carbon::now()->addMinutes((int) env('JWT_ACCESS_TOKEN_EXPIRATION'))->timestamp);
-
             $newAccessTokenCookie = cookie(name: 'access_token', value: $newAccessToken, secure: env("APP_ENV") != "local", httpOnly: false);
 
-            return response()->json(ResponseHelper::success('Berhasil mendapatkan akses token baru', [
+            return $this->successResponse([
                 'access_token' => $newAccessToken,
-            ]))->withCookie($newAccessTokenCookie);
+            ])->withCookie($newAccessTokenCookie);
         } catch (\Throwable $th) {
             Log::error($th->getMessage());
             $statusCode = $th->getCode();
-            if ($statusCode < 100 || $statusCode >= 600) {
-                $statusCode = 500;
-            }
-
-            return response()->json(ResponseHelper::error(message: "Internal Server Error", code: $statusCode), $statusCode);
+            return $this->errorResponse("Internal Server Error", $statusCode);
         }
     }
 
@@ -104,20 +99,19 @@ class AuthController extends Controller
             $refreshToken = $request->cookie('refresh_token') ?? $request->bearerToken() ?? $request->query('refresh_token');
             $accessToken = $request->bearerToken() ?? $request->query('access_token') ?? $request->cookie('access_token');
             if (!$refreshToken) {
-                return response()->json(ResponseHelper::error('Token tidak diberikan', [], 401), 401);
+                return $this->errorResponse("Token tidak diberikan", 401);
             }
 
             $validatedRefreshToken = $this->authService->validateToken($refreshToken);
             $validatedAccessToken = $this->authService->validateToken($accessToken);
 
             if (!$validatedAccessToken['valid']) {
-                return response()->json(ResponseHelper::error($validatedAccessToken['message'], [], $validatedAccessToken['status']), $validatedAccessToken['status']);
+                return $this->errorResponse($validatedAccessToken['message'], $validatedAccessToken['status']);
             }
 
             if (!$validatedRefreshToken['valid']) {
-                return response()->json(ResponseHelper::error($validatedRefreshToken['message'], [], $validatedRefreshToken['status']), $validatedRefreshToken['status']);
+                return $this->errorResponse($validatedRefreshToken['message'], $validatedRefreshToken['status']);
             }
-
 
             $this->authService->blacklistToken($accessToken);
 
@@ -126,20 +120,18 @@ class AuthController extends Controller
             })->first();
 
             if (!$user) {
-                return response()->json(ResponseHelper::error('Token tidak valid', [], 401), 401);
+                return $this->errorResponse('Token tidak valid', 401);
             }
 
             $user->sessions()->where('refresh_token', $refreshToken)->delete();
-
-            return response()->json(ResponseHelper::success('Berhasil logout'))->withoutCookie('refresh_token')->withoutCookie('access_token');
+            return $this->successResponse([
+                'message' => 'Berhasil logout',
+            ])->withoutCookie('refresh_token')->withoutCookie('access_token');
         } catch (\Throwable $th) {
             Log::error($th->getMessage());
             $statusCode = $th->getCode();
-            if ($statusCode < 100 || $statusCode >= 600) {
-                $statusCode = 500;
-            }
 
-            return response()->json(ResponseHelper::error(message: "Internal Server Error", code: $statusCode), $statusCode);
+            return $this->errorResponse("Internal Server Error", $statusCode);
         }
     }
 
@@ -149,19 +141,19 @@ class AuthController extends Controller
             $accessToken = $request->bearerToken() ?? $request->query('access_token') ?? $request->cookie('access_token');
 
             if (!$accessToken) {
-                return response()->json(ResponseHelper::error('Token tidak diberikan', [], 401), 401);
+                return $this->errorResponse("Token tidak diberikan", 401);
             }
 
             $validatedToken = $this->authService->validateToken($accessToken);
 
             if (!$validatedToken['valid']) {
-                return response()->json(ResponseHelper::error($validatedToken['message'], [], $validatedToken['status']), $validatedToken['status']);
+                return $this->errorResponse($validatedToken['message'], $validatedToken['status']);
             }
 
             $isBlacklisted = BlacklistedToken::where('token', $accessToken)->exists();
 
             if ($isBlacklisted) {
-                return response()->json(ResponseHelper::error('Token tidak valid', [], 401), 401);
+                return $this->errorResponse("Token sudah tidak valid", 401);
             }
 
             $user = [
@@ -172,17 +164,12 @@ class AuthController extends Controller
                 'role' => $validatedToken['decoded']->role,
             ];
 
-            return response()->json(ResponseHelper::success('Berhasil mendapatkan data user', [
-                'user' => $user,
-            ]));
+            return $this->successResponse($user);
         } catch (\Throwable $th) {
             Log::error($th->getMessage());
             $statusCode = $th->getCode();
-            if ($statusCode < 100 || $statusCode >= 600) {
-                $statusCode = 500;
-            }
 
-            return response()->json(ResponseHelper::error(message: "Internal Server Error", code: $statusCode), $statusCode);
+            return $this->errorResponse("Internal Server Error", $statusCode);
         }
     }
 }
