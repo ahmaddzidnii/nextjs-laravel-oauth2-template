@@ -2,7 +2,7 @@
 
 import { useLoginWithGoogle } from "@/features/auth/hooks/useLoginWithGoogle";
 
-export function Logout() {
+export function LogoutButton() {
   const { logout, isLoadingLogout } = useLoginWithGoogle();
 
   const handleLogout = () => {
