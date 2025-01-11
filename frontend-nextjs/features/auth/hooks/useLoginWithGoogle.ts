@@ -40,7 +40,9 @@ export function useLoginWithGoogle() {
     setIsLoadingLogout(true);
     axios
       .get("http://localhost:8000/api/auth/logout", {
-        params: { access_token: getCookie("access_token") },
+        headers: {
+          Authorization: `Bearer ${getCookie("access_token")}`,
+        },
         withCredentials: true,
       })
       .then((data) => {
