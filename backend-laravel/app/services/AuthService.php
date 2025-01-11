@@ -4,31 +4,86 @@ namespace App\Services;
 
 use App\Exceptions\GoogleApiException;
 use App\Models\BlacklistedToken;
+use App\Models\Session;
+use App\Models\User;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Http;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Illuminate\Database\RecordNotFoundException;
 use Illuminate\Support\Facades\Log;
 
 class AuthService
 {
+    public function handleGoogleLogin(string $code, string $user_agent)
+    {
+        try {
+
+            $tokens = $this->exchangeCode($code);
+            $userInfo = $this->getUserInfo($tokens['access_token']);
+            $user = User::firstOrCreate(
+                ['provider_id' => $userInfo['id']],
+                [
+                    'provider_id' => $userInfo['id'],
+                    'username' => $userInfo['name'],
+                    'email' => $userInfo['email'],
+                    'avatar' => $userInfo['picture'],
+                    'role' => 'user',
+                ]
+            );
+
+            $accessToken = $this->claimsJWT($user, Carbon::now()->addMinutes((int) env('JWT_ACCESS_TOKEN_EXPIRATION'))->timestamp);
+            $refreshToken = $this->claimsJWT($user, Carbon::now()->addMinutes((int) env('JWT_REFRESH_TOKEN_EXPIRATION'))->timestamp);
+
+            // Cek apakah session sudah ada
+            $existingSession = Session::where('user_id', $user->user_id)
+                ->where('user_agent', $user_agent)
+                ->first();
+
+            if ($existingSession) {
+                // Update session yang sudah ada
+                $existingSession->update([
+                    'refresh_token' => $refreshToken,
+                    'last_login' => now()->getPreciseTimestamp(3),
+                ]);
+            } else {
+                // Buat session baru jika belum ada
+                Session::create([
+                    'user_id' => $user->user_id,
+                    'user_agent' => $user_agent,
+                    'refresh_token' => $refreshToken,
+                    'last_login' => now()->getPreciseTimestamp(3),
+                ]);
+            }
+
+            return [
+                'access_token' => $accessToken,
+                'refresh_token' => $refreshToken,
+            ];
+        } catch (GoogleApiException $e) {
+            throw $e;
+        } catch (RecordNotFoundException $e) {
+            throw $e;
+        } catch (Exception $e) {
+            throw $e;
+        }
+    }
 
 
     private function handleGoogleError($response)
     {
 
         $status = $response->status();
-        $error_details = $response->json();
 
         // Pemetaan error custom
         $message = match ($status) {
-            400 => $errorDetails['error_description'] ?? 'Permintaan tidak valid. Silakan coba lagi.',
+            400 => 'Code tidak valid. Silakan coba lagi.',
             401 => 'Unauthorized. Silakan login terlebih dahulu.',
             403 => 'Forbidden. Anda tidak memiliki akses ke halaman ini.',
             500 => 'Server google sedang bermasalah. Silakan coba lagi nanti.',
-            default => $error_details['error_description'] ?? 'Terjadi kesalahan. Silakan coba lagi.',
+            default => 'Terjadi kesalahan. Silakan coba lagi.',
         };
 
         // Lempar exception

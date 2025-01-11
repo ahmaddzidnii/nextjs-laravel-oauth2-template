@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\GoogleApiException;
 use App\Helpers\ResponseHelper;
 use App\Models\BlacklistedToken;
-use App\Models\Session;
 use App\Models\User;
 use App\Services\AuthService;
+use App\Traits\ApiResponseHelper;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
+    use ApiResponseHelper;
     protected $authService;
 
     public function __construct(AuthService $authService)
@@ -25,56 +25,17 @@ class AuthController extends Controller
     {
         try {
             $user_agent = $request->userAgent();
-
             $code = $request->query('code');
 
             if (!$code) {
-                return response()->json(ResponseHelper::error('Kode tidak diberikan', [], 400), 400);
+                return $this->errorResponse("Kode tidak diberikan", 400);
             }
 
-
-            $tokens = $this->authService->exchangeCode($code);
-
-            $userInfo = $this->authService->getUserInfo($tokens['access_token']);
-
-            $user = User::firstOrCreate(
-                ['provider_id' => $userInfo['id']],
-                [
-                    'provider_id' => $userInfo['id'],
-                    'username' => $userInfo['name'],
-                    'email' => $userInfo['email'],
-                    'avatar' => $userInfo['picture'],
-                    'role' => 'user',
-                ]
-            );
-
-            $accessToken = $this->authService->claimsJWT($user, Carbon::now()->addMinutes((int) env('JWT_ACCESS_TOKEN_EXPIRATION'))->timestamp);
-
-            $refreshToken = $this->authService->claimsJWT($user, Carbon::now()->addMinutes((int) env('JWT_REFRESH_TOKEN_EXPIRATION'))->timestamp);
-
-            // Cek apakah session sudah ada
-            $existingSession = Session::where('user_id', $user->user_id)
-                ->where('user_agent', $user_agent)
-                ->first();
-
-            if ($existingSession) {
-                // Update session yang sudah ada
-                $existingSession->update([
-                    'refresh_token' => $refreshToken,
-                    'last_login' => now()->getPreciseTimestamp(3),
-                ]);
-            } else {
-                // Buat session baru jika belum ada
-                Session::create([
-                    'user_id' => $user->user_id,
-                    'user_agent' => $user_agent,
-                    'refresh_token' => $refreshToken,
-                    'last_login' => now()->getPreciseTimestamp(3),
-                ]);
-            }
+            $credentials = $this->authService->handleGoogleLogin($code, $user_agent);
+            $accessToken = $credentials['access_token'];
+            $refreshToken = $credentials['refresh_token'];
 
             $accessTokenCookie = cookie(name: 'access_token', value: $accessToken, secure: env("APP_ENV") != "local", httpOnly: false);
-
             $cookieRefreshToken = cookie(
                 name: 'refresh_token',
                 value: $refreshToken,
@@ -82,22 +43,13 @@ class AuthController extends Controller
                 httpOnly: true
             );
 
-            return response()->json(ResponseHelper::success('Berhasil login dengan Google', [
+            return $this->successResponse([
                 'access_token' => $accessToken,
-            ]))->withCookie($cookieRefreshToken)->withCookie($accessTokenCookie);
-        } catch (GoogleApiException $e) {
-            return response()->json(ResponseHelper::error($e->getMessage(), [], $e->getStatusCode()), $e->getStatusCode());
-        } catch (\Throwable $th) {
-            // Log error detail untuk debugging
+            ])->withCookie($cookieRefreshToken)->withCookie($accessTokenCookie);
+        } catch (\Exception $th) {
             Log::error($th->getMessage());
-
-            // Berikan respon yang informatif untuk klien
             $statusCode = $th->getCode();
-            if ($statusCode < 100 || $statusCode >= 600) {
-                $statusCode = 500; // Default ke Internal Server Error
-            }
-
-            return response()->json(ResponseHelper::error(message: "Internal Server Error", code: $statusCode), $statusCode);
+            return $this->errorResponse($th->getMessage(), $statusCode);
         }
     }
 
