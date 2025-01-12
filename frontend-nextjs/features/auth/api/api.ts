@@ -19,11 +19,10 @@ const refreshAccessToken = async () => {
       withCredentials: true,
     });
 
-    const { access_token, refresh_token } = response.data;
+    const { access_token } = response.data.data;
 
     // Update cookies with new tokens
     setCookie("access_token", access_token);
-    setCookie("refresh_token", refresh_token);
 
     return access_token;
   } catch (error) {
@@ -48,7 +47,6 @@ api.interceptors.response.use(
       } catch (refreshError) {
         console.error("Refresh token failed", refreshError);
         deleteCookie("access_token");
-        deleteCookie("refresh_token");
         return null;
       }
     }
