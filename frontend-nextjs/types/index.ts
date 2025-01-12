@@ -11,4 +11,5 @@ export interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   getAccessToken: () => string | null;
+  setToken: (token: string) => void;
 }

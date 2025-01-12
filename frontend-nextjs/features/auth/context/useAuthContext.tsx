@@ -1,8 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { CookieValueTypes, getCookie } from "cookies-next";
+import { CookieValueTypes, deleteCookie, getCookie } from "cookies-next";
 import { createContext, useEffect, useState } from "react";
 
 import api from "@/features/auth/api/api";
@@ -12,50 +11,57 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthContextProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const router = useRouter();
 
   const accessToken = getCookie("access_token");
+  const [token, setToken] = useState<CookieValueTypes | Promise<CookieValueTypes>>(accessToken);
 
   // Query to fetch current user with enabled condition
-  const { data, isLoading, isSuccess, isError } = useQuery({
+  const { data, isLoading, isSuccess, isError, error } = useQuery({
     queryKey: ["user"],
     queryFn: async () => {
       return api.get("/auth/me");
     },
-    // Only run query if we have an access token
-    enabled: !!accessToken,
-    // Retry only once
+    enabled: !!token,
     retry: false,
     refetchInterval: 1000 * 60 * 0.5, // Refetch every 30 seconds
   });
 
   useEffect(() => {
-    if (!accessToken) {
-      setIsAuthenticated(false);
-    }
+    const handleAuthState = () => {
+      if (!token) {
+        setIsAuthenticated(false);
+        return;
+      }
 
-    if (isError) {
-      setIsAuthenticated(false);
-    }
+      if (isError) {
+        setIsAuthenticated(false);
+        deleteCookie("access_token");
+        window.location.reload();
+        return;
+      }
 
-    if (isSuccess) {
-      setIsAuthenticated(true);
-    }
-  }, [accessToken, isSuccess, isError]);
+      if (isSuccess && data?.data.data) {
+        setIsAuthenticated(true);
+      }
+    };
+
+    handleAuthState();
+  }, [token, isSuccess, isError, data?.data.data]);
 
   const user: AuthUser = {
-    id: data?.data.data.user_id,
-    username: data?.data.data.username,
-    email: data?.data.data.email,
-    avatar: data?.data.data.avatar,
-    role: data?.data.data.role,
+    id: data?.data.data?.user_id,
+    username: data?.data.data?.username,
+    email: data?.data.data?.email,
+    avatar: data?.data.data?.avatar,
+    role: data?.data.data?.role,
   };
 
   const contextValue: AuthContextType = {
     user: isAuthenticated ? user : null,
-    isLoading: !!accessToken && isLoading, // Only show loading state if we have a token
+    isLoading: !!token && isLoading,
     isAuthenticated,
-    getAccessToken: () => (accessToken as string) ?? null,
+    getAccessToken: () => (token as string) ?? null,
+    setToken,
   };
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
