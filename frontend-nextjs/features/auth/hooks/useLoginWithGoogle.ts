@@ -2,11 +2,14 @@ import axios from "axios";
 import { useState } from "react";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function useLoginWithGoogle() {
   const router = useRouter();
 
   const [isLoadingLogin, setIsLoadingLogin] = useState(false);
+
+  const queryClient = useQueryClient();
 
   const login = useGoogleLogin({
     flow: "auth-code",
@@ -16,7 +19,7 @@ export function useLoginWithGoogle() {
     onSuccess: async ({ code }) => {
       try {
         setIsLoadingLogin(true);
-        const responseToken = await axios.get<{
+        await axios.get<{
           status_code: number;
           message: string;
           data: { access_token: string };
@@ -25,7 +28,9 @@ export function useLoginWithGoogle() {
           withCredentials: true,
         });
         setIsLoadingLogin(false);
-
+        queryClient.fetchQuery({
+          queryKey: ["user"],
+        });
         router.replace(process.env.NEXT_PUBLIC_DEFAULT_REDIRECT_AFTER_LOGIN ?? "/dashboard");
       } catch (error) {
         setIsLoadingLogin(false);
