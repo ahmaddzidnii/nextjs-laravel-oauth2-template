@@ -28,10 +28,10 @@ export function useLoginWithGoogle() {
           withCredentials: true,
         });
         setIsLoadingLogin(false);
-        queryClient.fetchQuery({
+        router.replace(process.env.NEXT_PUBLIC_DEFAULT_REDIRECT_AFTER_LOGIN ?? "/dashboard");
+        queryClient.invalidateQueries({
           queryKey: ["user"],
         });
-        router.replace(process.env.NEXT_PUBLIC_DEFAULT_REDIRECT_AFTER_LOGIN ?? "/dashboard");
       } catch (error) {
         setIsLoadingLogin(false);
         console.error("Failed to login with Google:", error);

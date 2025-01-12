@@ -10,11 +10,6 @@ const api = axios.create({
 // Function to refresh token
 const refreshAccessToken = async () => {
   try {
-    const refreshToken = getCookie("refresh_token");
-    if (!refreshToken) {
-      return null;
-    }
-
     const response = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/refresh`, {
       withCredentials: true,
     });
@@ -47,7 +42,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         console.error("Refresh token failed", refreshError);
         deleteCookie("access_token");
-        return null;
+        throw refreshError;
       }
     }
 

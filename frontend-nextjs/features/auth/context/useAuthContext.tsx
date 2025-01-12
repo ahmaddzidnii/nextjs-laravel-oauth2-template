@@ -1,7 +1,8 @@
 "use client";
 
-import { getCookie } from "cookies-next";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { CookieValueTypes, getCookie } from "cookies-next";
 import { createContext, useEffect, useState } from "react";
 
 import api from "@/features/auth/api/api";
@@ -11,6 +12,7 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthContextProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const router = useRouter();
 
   const accessToken = getCookie("access_token");
 
@@ -23,7 +25,7 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
     // Only run query if we have an access token
     enabled: !!accessToken,
     // Retry only once
-    retry: 1,
+    retry: false,
     refetchInterval: 1000 * 60 * 0.5, // Refetch every 30 seconds
   });
 
@@ -39,7 +41,7 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
     if (isSuccess) {
       setIsAuthenticated(true);
     }
-  }, [accessToken, isSuccess]);
+  }, [accessToken, isSuccess, isError]);
 
   const user: AuthUser = {
     id: data?.data.data.user_id,
