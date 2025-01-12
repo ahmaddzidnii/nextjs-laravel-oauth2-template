@@ -7,6 +7,7 @@ export default function LoginButton() {
   return (
     <button
       onClick={login}
+      disabled={isLoadingLogin}
       className="w-full bg-white mt-5 rounded-md p-2"
     >
       {isLoadingLogin ? "Loading..." : "Login With Google"}

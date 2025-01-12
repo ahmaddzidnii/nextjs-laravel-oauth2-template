@@ -1,14 +1,12 @@
 import axios from "axios";
-import { useRouter } from "next/navigation";
-import { useGoogleLogin } from "@react-oauth/google";
-import { getCookie } from "cookies-next";
 import { useState } from "react";
+import { useGoogleLogin } from "@react-oauth/google";
+import { useRouter } from "next/navigation";
 
 export function useLoginWithGoogle() {
   const router = useRouter();
 
   const [isLoadingLogin, setIsLoadingLogin] = useState(false);
-  const [isLoadingLogout, setIsLoadingLogout] = useState(false);
 
   const login = useGoogleLogin({
     flow: "auth-code",
@@ -36,26 +34,5 @@ export function useLoginWithGoogle() {
     },
   });
 
-  const logout = ({ onError }: { onError?: (error: unknown) => void }) => {
-    setIsLoadingLogout(true);
-    axios
-      .get("http://localhost:8000/api/auth/logout", {
-        headers: {
-          Authorization: `Bearer ${getCookie("access_token")}`,
-        },
-        withCredentials: true,
-      })
-      .then((data) => {
-        setIsLoadingLogout(false);
-        // TODO:invalidate cache user
-        router.replace(process.env.NEZT_PUBLIC_DEFAULT_REDIRECT_AFTER_LOGOUT ?? "/login");
-      })
-      .catch((error) => {
-        setIsLoadingLogout(false);
-        console.error("Failed to logout:", error);
-        onError?.(error);
-      });
-  };
-
-  return { login, logout, isLoadingLogin, isLoadingLogout };
+  return { login, isLoadingLogin };
 }
