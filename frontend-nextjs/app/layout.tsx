@@ -28,7 +28,9 @@ export default function RootLayout({
       <body className={`${poppins.className} antialiased`}>
         <TanstackProvider>
           <GoogleOAuthProvider clientId="941907082804-lb0uklitrosgfoi6phd3jrtpurrciqng.apps.googleusercontent.com">
-            <AuthContextProvider>{children}</AuthContextProvider>
+            <AuthContextProvider>
+              <div className="container mx-auto px-4">{children}</div>
+            </AuthContextProvider>
           </GoogleOAuthProvider>
         </TanstackProvider>
       </body>

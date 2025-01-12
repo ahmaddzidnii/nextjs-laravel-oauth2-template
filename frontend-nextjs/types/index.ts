@@ -5,3 +5,10 @@ export interface AuthUser {
   avatar: string;
   role: string;
 }
+
+export interface AuthContextType {
+  isLoading: boolean;
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  getAccessToken: () => string | null;
+}

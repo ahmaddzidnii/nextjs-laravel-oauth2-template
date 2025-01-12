@@ -12,7 +12,7 @@ const refreshAccessToken = async () => {
   try {
     const refreshToken = getCookie("refresh_token");
     if (!refreshToken) {
-      throw new Error("No refresh token available");
+      return null;
     }
 
     const response = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/refresh`, {
@@ -49,7 +49,7 @@ api.interceptors.response.use(
         console.error("Refresh token failed", refreshError);
         deleteCookie("access_token");
         deleteCookie("refresh_token");
-        throw refreshError;
+        return null;
       }
     }
 

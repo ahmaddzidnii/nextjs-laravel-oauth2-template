@@ -122,6 +122,16 @@ export function authMiddleware(callback: MiddlewareCallback) {
           req
         );
       } catch (error: any) {
+        if (error.code === "ERR_JWS_INVALID") {
+          // delete the cookies
+          const response = await callback(createAuthObject(false, null), req);
+          const finalResponse = response instanceof NextResponse ? response : NextResponse.next();
+
+          finalResponse.cookies.delete("access_token");
+          finalResponse.cookies.delete("refresh_token");
+
+          return finalResponse;
+        }
         // Handle expired token
         if (error.code === "ERR_JWT_EXPIRED" && refreshToken) {
           console.log("Access token expired, refreshing...");

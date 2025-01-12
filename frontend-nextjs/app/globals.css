@@ -19,3 +19,16 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@layer utilities {
+  .bg-grid {
+    background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px),
+      linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .dark .bg-grid {
+    background-image: linear-gradient(to right, #334155 1px, transparent 1px),
+      linear-gradient(to bottom, #334155 1px, transparent 1px);
+  }
+}
