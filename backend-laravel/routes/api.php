@@ -10,5 +10,11 @@ Route::group([
     Route::get('google/callback', [AuthController::class, 'googleCallback']);
     Route::get('refresh', [AuthController::class, 'refresh']);
     Route::get('logout', [AuthController::class, 'logout']);
+});
+
+Route::group([
+    'prefix' => '/',
+    'middleware' => ['throttle:api', 'jwt.middleware'],
+], function () {
     Route::get('me', [AuthController::class, 'me']);
 });

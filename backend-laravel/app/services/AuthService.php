@@ -15,6 +15,7 @@ use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AuthService
 {
@@ -215,7 +216,7 @@ class AuthService
                 throw new Exception("Token is not given", 401);
             }
 
-            $validatedToken = $this->jwtHelpers->validateToken($accessToken);
+            $this->jwtHelpers->validateToken($accessToken);
 
             $isBlacklisted = BlacklistedToken::where('token', $accessToken)->exists();
 
@@ -223,15 +224,17 @@ class AuthService
                 throw new Exception("Token is not valid", 401);
             }
 
-            $user = [
-                'user_id' => $validatedToken['decoded']->sub,
-                'username' => $validatedToken['decoded']->username,
-                'email' => $validatedToken['decoded']->email,
-                'avatar' => $validatedToken['decoded']->avatar,
-                'role' => $validatedToken['decoded']->role,
+            $user = $request->attributes->get('user');
+
+            $responseUser = [
+                'user_id' => $user->sub,
+                'username' => $user->username,
+                'email' => $user->email,
+                'avatar' => $user->avatar,
+                'role' => $user->role,
             ];
 
-            return $user;
+            return $responseUser;
         } catch (\Exception $th) {
             throw $th;
         }
