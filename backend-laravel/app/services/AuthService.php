@@ -2,20 +2,18 @@
 
 namespace App\Services;
 
-use App\Exceptions\GoogleApiException;
-use App\Helpers\JwtHelpers;
-use App\Models\BlacklistedToken;
-use App\Models\Session;
-use App\Models\User;
-use Carbon\Carbon;
 use Exception;
-use Illuminate\Support\Facades\Http;
-
+use Carbon\Carbon;
+use App\Models\User;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
-use Illuminate\Support\Facades\Log;
+use App\Models\Session;
+use App\Helpers\JwtHelpers;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\BlacklistedToken;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
+use App\Exceptions\GoogleApiException;
 
 class AuthService
 {
