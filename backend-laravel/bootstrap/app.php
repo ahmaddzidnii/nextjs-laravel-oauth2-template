@@ -7,6 +7,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -33,6 +34,14 @@ return Application::configure(basePath: dirname(__DIR__))
                 return (new class {
                     use ApiResponseHelper;
                 })->errorResponse('Method not allowed.', 405);
+            }
+        });
+
+        $exceptions->render(function (TooManyRequestsHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return (new class {
+                    use ApiResponseHelper;
+                })->errorResponse("Too many request, please slow down", 429);
             }
         });
     })->create();
