@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\GoogleApiException;
+use App\Helpers\JwtHelpers;
 use App\Models\BlacklistedToken;
 use App\Models\Session;
 use App\Models\User;
@@ -12,14 +13,27 @@ use Illuminate\Support\Facades\Http;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
-use Illuminate\Database\RecordNotFoundException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
 
 class AuthService
 {
-    public function handleGoogleLogin(string $code, string $user_agent)
+    protected $jwtHelpers;
+
+    public function __construct(JwtHelpers $jwtHelpers)
+    {
+        $this->jwtHelpers = $jwtHelpers;;
+    }
+
+    public function handleGoogleLogin(Request $request)
     {
         try {
+            $user_agent = $request->userAgent();
+            $code = $request->query('code');
+
+            if (!$code) {
+                throw new Exception("Code is not given", 400);
+            }
 
             $tokens = $this->exchangeCode($code);
             $userInfo = $this->getUserInfo($tokens['access_token']);
@@ -34,8 +48,8 @@ class AuthService
                 ]
             );
 
-            $accessToken = $this->claimsJWT($user, Carbon::now()->addMinutes((int) env('JWT_ACCESS_TOKEN_EXPIRATION'))->timestamp);
-            $refreshToken = $this->claimsJWT($user, Carbon::now()->addMinutes((int) env('JWT_REFRESH_TOKEN_EXPIRATION'))->timestamp);
+            $accessToken = $this->jwtHelpers->createToken($user, Carbon::now()->addMinutes((int) env('JWT_ACCESS_TOKEN_EXPIRATION'))->timestamp);
+            $refreshToken = $this->jwtHelpers->createToken($user, Carbon::now()->addMinutes((int) env('JWT_REFRESH_TOKEN_EXPIRATION'))->timestamp);
 
             // Cek apakah session sudah ada
             $existingSession = Session::where('user_id', $user->user_id)
@@ -64,8 +78,8 @@ class AuthService
             ];
         } catch (GoogleApiException $e) {
             throw $e;
-        } catch (RecordNotFoundException $e) {
-            throw $e;
+        } catch (\Illuminate\Database\QueryException $e) {
+            throw new Exception($e->getMessage(), 500);
         } catch (Exception $e) {
             throw $e;
         }
@@ -87,7 +101,6 @@ class AuthService
         };
 
         // Lempar exception
-        // throw new GoogleApiException($message, $status);
         throw new GoogleApiException($message, $status);
     }
 
@@ -127,72 +140,100 @@ class AuthService
         return $response_userInfo->json();
     }
 
-    public function claimsJWT($user, $expiresIn = null)
-    {
-        $issued_at = Carbon::now()->timestamp;
-        $payload = [
-            'iss' => "backend-laravel",
-            'iat' => $issued_at,
-            'exp' => $expiresIn ?? Carbon::now()->addDays(7)->timestamp,
-            'sub' => $user['user_id'],
-            'username' => $user['username'],
-            'email' => $user['email'],
-            'role' => $user['role'],
-            'avatar' => $user['avatar'],
-        ];
-
-
-        return JWT::encode($payload, env('JWT_SECRET'), 'HS256');
-    }
-
-    public function validateToken($token)
+    public  function handleRefreshToken(Request $request)
     {
         try {
-            // Decode token
-            $decoded = JWT::decode($token, new Key(env('JWT_SECRET'), 'HS256'));
+            // Get refresh token from cookie, bearer token, or query string
+            $refreshToken = $request->cookie('refresh_token') ?? $request->bearerToken() ?? $request->query('refresh_token');
 
-            // Cek expired time
-            if (isset($decoded->exp) && now()->timestamp >= $decoded->exp) {
-                return [
-                    'valid' => false,
-                    'message' => 'Token sudah expired',
-                    'status' => 401
-                ];
+            if (!$refreshToken) {
+                throw new Exception("Token is not given", 401);
             }
 
-            // Cek issuer (optional, sesuaikan dengan kebutuhan)
-            if (isset($decoded->iss) && $decoded->iss !== 'backend-laravel') {
-                return [
-                    'valid' => false,
-                    'message' => 'Token tidak valid',
-                    'status' => 401
-                ];
+            $this->jwtHelpers->validateToken($refreshToken);
+
+            // Check user refresh token in database
+            $user = User::whereHas('sessions', function ($query) use ($refreshToken) {
+                $query->where('refresh_token', $refreshToken);
+            })->first();
+
+            if (!$user) {
+                throw new Exception("User not found", 404);
             }
 
-            // Token valid
+            $accessTokenExpiresIn = Carbon::now()->addMinutes((int) env('JWT_ACCESS_TOKEN_EXPIRATION'))->timestamp;
+
+            $newAccessToken = $this->jwtHelpers->createToken($user, $accessTokenExpiresIn);
+
             return [
-                'valid' => true,
-                'decoded' => $decoded,
-                'status' => 200
+                'access_token' => $newAccessToken,
             ];
-        } catch (\Firebase\JWT\ExpiredException $e) {
-            return [
-                'valid' => false,
-                'message' => 'Token sudah expired',
-                'status' => 401
+        } catch (\Illuminate\Database\QueryException $e) {
+            throw new Exception($e->getMessage(), 500);
+        } catch (\Exception $e) {
+            throw $e;
+        }
+    }
+
+    public function handleLogout(Request $request)
+    {
+        try {
+            $refreshToken = $request->cookie('refresh_token') ?? $request->bearerToken() ?? $request->query('refresh_token');
+            $accessToken = $request->bearerToken() ?? $request->query('access_token') ?? $request->cookie('access_token');
+            if (!$refreshToken) {
+                throw new Exception("Token is not given", 401);
+            }
+
+            $this->jwtHelpers->validateToken($refreshToken);
+            $this->jwtHelpers->validateToken($accessToken);
+
+
+            $this->blacklistToken($accessToken);
+
+            $user = User::whereHas('sessions', function ($query) use ($refreshToken) {
+                $query->where('refresh_token', $refreshToken);
+            })->first();
+
+            if (!$user) {
+                throw new Exception("Token is not valid", 401);
+            }
+
+            $user->sessions()->where('refresh_token', $refreshToken)->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            throw new Exception($e->getMessage(), 500);
+        } catch (\Exception $e) {
+            throw $e;
+        }
+    }
+
+    public function handleGetMe(Request $request)
+    {
+        try {
+            $accessToken = $request->bearerToken() ?? $request->query('access_token') ?? $request->cookie('access_token');
+
+            if (!$accessToken) {
+                throw new Exception("Token is not given", 401);
+            }
+
+            $validatedToken = $this->jwtHelpers->validateToken($accessToken);
+
+            $isBlacklisted = BlacklistedToken::where('token', $accessToken)->exists();
+
+            if ($isBlacklisted) {
+                throw new Exception("Token is not valid", 401);
+            }
+
+            $user = [
+                'user_id' => $validatedToken['decoded']->sub,
+                'username' => $validatedToken['decoded']->username,
+                'email' => $validatedToken['decoded']->email,
+                'avatar' => $validatedToken['decoded']->avatar,
+                'role' => $validatedToken['decoded']->role,
             ];
-        } catch (\Firebase\JWT\SignatureInvalidException $e) {
-            return [
-                'valid' => false,
-                'message' => 'Token tidak valid',
-                'status' => 401
-            ];
-        } catch (Exception $e) {
-            return [
-                'valid' => false,
-                'message' => 'Struktur token tidak valid',
-                'status' => 401
-            ];
+
+            return $user;
+        } catch (\Exception $th) {
+            throw $th;
         }
     }
 
