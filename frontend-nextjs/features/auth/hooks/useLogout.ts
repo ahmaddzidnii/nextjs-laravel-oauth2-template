@@ -13,7 +13,7 @@ export function useLogout() {
   const logout = ({ onError }: { onError?: (error: unknown) => void }) => {
     setIsLoadingLogout(true);
     axios
-      .get("http://localhost:8000/api/auth/logout", {
+      .get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/logout`, {
         headers: {
           Authorization: `Bearer ${getCookie("access_token")}`,
         },
@@ -21,7 +21,7 @@ export function useLogout() {
       })
       .then((data) => {
         setIsLoadingLogout(false);
-        // TODO:invalidate cache user
+        // Remove user query from cache
         queryClient.removeQueries({
           queryKey: ["user"],
         });

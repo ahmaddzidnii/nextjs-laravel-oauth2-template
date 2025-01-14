@@ -24,7 +24,7 @@ export function useLoginWithGoogle() {
           status_code: number;
           message: string;
           data: { access_token: string };
-        }>("http://localhost:8000/api/auth/google/callback", {
+        }>("http://localhost:8000/api/auth/oauth/google/callback", {
           params: { code },
           withCredentials: true,
         });

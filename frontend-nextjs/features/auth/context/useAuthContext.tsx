@@ -19,7 +19,7 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
   const { data, isLoading, isSuccess, isError, error } = useQuery({
     queryKey: ["user"],
     queryFn: async () => {
-      return api.get("/auth/me");
+      return api.get("/profile/me");
     },
     enabled: !!token,
     retry: false,
@@ -35,8 +35,8 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
 
       if (isError) {
         setIsAuthenticated(false);
-        deleteCookie("access_token");
-        window.location.reload();
+        // deleteCookie("access_token");
+        // window.location.reload();
         return;
       }
 
