@@ -14,6 +14,7 @@ use App\Models\BlacklistedToken;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use App\Exceptions\GoogleApiException;
+use App\Http\Requests\Auth\GoogleCallbackRequest;
 
 class AuthService
 {
@@ -24,15 +25,11 @@ class AuthService
         $this->jwtHelpers = $jwtHelpers;;
     }
 
-    public function handleGoogleLogin(Request $request)
+    public function handleGoogleLogin(GoogleCallbackRequest $request)
     {
         try {
+            $code = $request->validated()['code'];
             $user_agent = $request->userAgent();
-            $code = $request->query('code');
-
-            if (!$code) {
-                throw new Exception("Code is not given", 400);
-            }
 
             $tokens = $this->exchangeCode($code);
             $userInfo = $this->getUserInfo($tokens['access_token']);

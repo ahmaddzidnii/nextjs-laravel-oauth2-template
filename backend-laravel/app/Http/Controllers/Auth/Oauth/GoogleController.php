@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Auth\Oauth;
 
-use Illuminate\Http\Request;
 use App\Services\AuthService;
 use App\Traits\ApiResponseHelper;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\GoogleCallbackRequest;
 
 class GoogleController extends Controller
 {
@@ -18,7 +18,7 @@ class GoogleController extends Controller
         $this->authService = $authService;
     }
 
-    public function callback(Request $request)
+    public function callback(GoogleCallbackRequest $request)
     {
         try {
             $credentials = $this->authService->handleGoogleLogin($request);
@@ -33,8 +33,20 @@ class GoogleController extends Controller
                 'refresh_token' => $refreshToken,
             ])->withCookie($cookieRefreshToken)->withCookie($accessTokenCookie);
         } catch (\Exception $e) {
-            Log::error($e->getMessage());
-            $statusCode = $e->getCode();
+            Log::error($e->getMessage(), [
+                'context' => [
+                    'exception_class' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'request_ip' => $request->ip(),
+                    'request_url' => $request->fullUrl(),
+                    'request_method' => $request->method(),
+                    'user_agent' => $request->userAgent()
+                ]
+            ]);
+
+            $statusCode = $e->getCode() ?: 500;
             return $this->errorResponse($e->getMessage(), $statusCode);
         }
     }
