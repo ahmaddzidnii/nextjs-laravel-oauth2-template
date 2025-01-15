@@ -2,10 +2,12 @@
 
 namespace App\Http\Middleware;
 
+use App\Exceptions\AuthException;
 use App\Helpers\JwtHelpers;
 use App\Traits\ApiResponseHelper;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthMiddleware
@@ -24,21 +26,16 @@ class AuthMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        try {
-            // Get refresh token from cookie, bearer token, or query string
-            $refreshToken = $request->cookie('refresh_token') ?? $request->bearerToken() ?? $request->query('refresh_token');
 
-            if (!$refreshToken) {
-                throw new \Exception("Token is not given", 401);
-            }
+        // Get refresh token from cookie, bearer token, or query string
+        $accsessToken = $request->cookie('refresh_token') ?? $request->bearerToken() ?? $request->query('refresh_token');
 
-            $validatedToken = $this->jwtHelpers->validateToken($refreshToken);
-            $request->attributes->add(['user' => $validatedToken['decoded']]);
-            return $next($request);
-        } catch (\Exception $e) {
-            return (new class {
-                use ApiResponseHelper;
-            })->errorResponse($e->getMessage(), $e->getCode());
+        if (!$accsessToken) {
+            throw new AuthException();
         }
+
+        $validatedToken = $this->jwtHelpers->validateToken($accsessToken);
+        $request->attributes->add(['user' => $validatedToken['decoded']]);
+        return $next($request);
     }
 }
