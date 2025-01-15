@@ -21,13 +21,7 @@ class ProfileController extends Controller
 
     public function me(Request $request)
     {
-        try {
-            $user = $this->authService->handleGetMe($request);
-            return $this->successResponse($user);
-        } catch (\Exception $e) {
-            Log::error($e->getMessage());
-            $statusCode = $e->getCode();
-            return $this->errorResponse($statusCode == 500 ? "Internal Server Error" : $e->getMessage(), $statusCode);
-        }
+        $user = $this->authService->handleGetMe($request);
+        return $this->successResponse($user);
     }
 }

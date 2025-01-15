@@ -32,9 +32,14 @@ class AuthMiddleware
             throw new AuthException();
         }
 
+        try {
+            $validatedToken = $this->jwtHelpers->validateToken($accsessToken);
+        } catch (\Exception $e) {
+            throw new AuthException($e->getMessage());
+        }
 
-        $validatedToken = $this->jwtHelpers->validateToken($accsessToken);
         $request->attributes->add(['user' => $validatedToken['decoded']]);
+
         return $next($request);
     }
 }

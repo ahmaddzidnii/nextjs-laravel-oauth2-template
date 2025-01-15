@@ -1,10 +1,13 @@
 <?php
 
+use App\Exceptions\AuthException;
 use App\Traits\ApiResponseHelper;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -26,6 +29,49 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+
+        $exceptions->render(function (\RuntimeException | ErrorException $e, Request $request) {
+
+            Log::debug($e->getMessage(), [
+                'context' => [
+                    'exception_class' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'request_ip' => $request->ip(),
+                    'request_url' => $request->fullUrl(),
+                    'request_method' => $request->method(),
+                    'user_agent' => $request->userAgent()
+                ]
+            ]);
+
+            if ($request->is('api/*')) {
+                Log::error($e->getMessage(), [
+                    'context' => [
+                        'exception_class' => get_class($e),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'trace' => $e->getTraceAsString(),
+                        'request_ip' => $request->ip(),
+                        'request_url' => $request->fullUrl(),
+                        'request_method' => $request->method(),
+                        'user_agent' => $request->userAgent(),
+                    ]
+                ]);
+                return (new class {
+                    use ApiResponseHelper;
+                })->errorResponse('Internal Server Error', 500);
+            }
+        });
+
+        $exceptions->render(function (AuthException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return (new class {
+                    use ApiResponseHelper;
+                })->errorResponse($e->getMessage(), 401);
+            }
+        });
+
         $exceptions->render(function (ValidationException $e, Request $request) {
             if ($request->is('api/*')) {
                 return (new class {
@@ -33,6 +79,27 @@ return Application::configure(basePath: dirname(__DIR__))
                 })->errorResponse($e->validator->errors()->toArray(), 400);
             }
         });
+
+        $exceptions->render(function (QueryException $e, Request $request) {
+            if ($request->is('api/*')) {
+                Log::debug($e->getMessage(), [
+                    'context' => [
+                        'exception_class' => get_class($e),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'trace' => $e->getTraceAsString(),
+                        'request_ip' => $request->ip(),
+                        'request_url' => $request->fullUrl(),
+                        'request_method' => $request->method(),
+                        'user_agent' => $request->userAgent()
+                    ]
+                ]);
+                return (new class {
+                    use ApiResponseHelper;
+                })->errorResponse("Internal Server Error", 500);
+            }
+        });
+
 
         $exceptions->render(function (NotFoundHttpException $e, Request $request) {
             if ($request->is('api/*')) {
