@@ -4,15 +4,13 @@ namespace App\Http\Middleware;
 
 use App\Exceptions\AuthException;
 use App\Helpers\JwtHelpers;
-use App\Traits\ApiResponseHelper;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthMiddleware
 {
-    protected $jwtHelpers;
+    private readonly JwtHelpers $jwtHelpers;
 
     public function __construct(JwtHelpers $jwtHelpers)
     {
@@ -33,6 +31,7 @@ class AuthMiddleware
         if (!$accsessToken) {
             throw new AuthException();
         }
+
 
         $validatedToken = $this->jwtHelpers->validateToken($accsessToken);
         $request->attributes->add(['user' => $validatedToken['decoded']]);
