@@ -10,12 +10,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 class AuthMiddleware
 {
-    private readonly JwtHelpers $jwtHelpers;
 
-    public function __construct(JwtHelpers $jwtHelpers)
-    {
-        $this->jwtHelpers = $jwtHelpers;
-    }
+    public function __construct(protected readonly JwtHelpers $jwtHelpers) {}
 
     /**
      * Handle an incoming request.

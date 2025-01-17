@@ -10,12 +10,8 @@ use App\Http\Controllers\Controller;
 class TokenController extends Controller
 {
     use ApiResponseHelper;
-    protected $authService;
 
-    public function __construct(AuthService $authService)
-    {
-        $this->authService = $authService;
-    }
+    public function __construct(protected readonly AuthService $authService) {}
 
     public function refresh(Request $request)
     {

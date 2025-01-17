@@ -12,9 +12,7 @@ class ProfileController extends Controller
 {
     use ApiResponseHelper;
 
-    protected $authService;
-
-    public function __construct(AuthService $authService)
+    public function __construct(protected readonly AuthService $authService)
     {
         $this->authService = $authService;
     }
