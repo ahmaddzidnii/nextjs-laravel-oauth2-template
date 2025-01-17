@@ -9,12 +9,7 @@ use App\Exceptions\AuthException;
 
 class TokenRepository
 {
-    private readonly JwtHelpers $jwtHelpers;
-
-    public function __construct(JwtHelpers $jwtHelpers)
-    {
-        $this->jwtHelpers = $jwtHelpers;
-    }
+    public function __construct(protected readonly JwtHelpers $jwtHelpers) {}
 
     public function blacklistToken($token)
     {
