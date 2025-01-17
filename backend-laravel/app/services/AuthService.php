@@ -2,28 +2,29 @@
 
 namespace App\Services;
 
-use App\Exceptions\AuthException;
 use Exception;
 use Carbon\Carbon;
 use App\Models\User;
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
 use App\Models\Session;
 use App\Helpers\JwtHelpers;
 use Illuminate\Http\Request;
 use App\Models\BlacklistedToken;
+use App\Exceptions\AuthException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
-use App\Http\Requests\Auth\GoogleCallbackRequest;
 use Illuminate\Validation\ValidationException;
+use App\Http\Requests\Auth\GoogleCallbackRequest;
+use App\Repositories\TokenRepository;
 
 class AuthService
 {
     protected $jwtHelpers;
+    protected $tokenRepository;
 
-    public function __construct(JwtHelpers $jwtHelpers)
+    public function __construct(JwtHelpers $jwtHelpers, TokenRepository $tokenRepository)
     {
-        $this->jwtHelpers = $jwtHelpers;;
+        $this->jwtHelpers = $jwtHelpers;
+        $this->tokenRepository = $tokenRepository;
     }
 
     public function handleGoogleLogin(GoogleCallbackRequest $request)
@@ -235,7 +236,7 @@ class AuthService
             throw new AuthException($e->getMessage());
         }
 
-        $this->blacklistToken($accessToken);
+        $this->tokenRepository->blacklistToken($accessToken);
 
         $user = User::whereHas('sessions', function ($query) use ($refreshToken) {
             $query->where('refresh_token', $refreshToken);
@@ -273,20 +274,5 @@ class AuthService
         ];
 
         return $responseUser;
-    }
-
-    public function blacklistToken($token)
-    {
-        try {
-            $decodedToken = JWT::decode($token, new Key(env('JWT_SECRET'), 'HS256'));
-            $expiresAt = Carbon::createFromTimestamp($decodedToken->exp);
-
-            $blacklistToken = new BlacklistedToken();
-            $blacklistToken->token = $token;
-            $blacklistToken->expires_at = $expiresAt;
-            $blacklistToken->save();
-        } catch (\Throwable $th) {
-            throw $th;
-        }
     }
 }
