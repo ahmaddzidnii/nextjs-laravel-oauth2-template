@@ -2,8 +2,8 @@
 
 namespace App\Repositories;
 
+use App\Enums\ProviderEnum;
 use App\Models\Account;
-use App\ProviderEnum;
 
 class AccountRepository
 {

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\ProviderEnum;
 use Exception;
 use Carbon\Carbon;
 use App\Models\User;
@@ -11,7 +12,6 @@ use Illuminate\Http\Request;
 use App\Models\BlacklistedToken;
 use App\Exceptions\AuthException;
 use App\Helpers\GoogleOAuthHelper;
-use App\ProviderEnum;
 use App\Repositories\AccountRepository;
 use App\Repositories\SessionRepository;
 use App\Repositories\TokenRepository;
