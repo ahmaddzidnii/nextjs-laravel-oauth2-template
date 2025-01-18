@@ -16,7 +16,10 @@ class GoogleController extends Controller
 
     public function callback(GoogleCallbackRequest $request)
     {
-        $credentials = $this->authService->handleGoogleLogin($request);
+        $code = $request->validated()['code'];
+        $userAgent = $request->userAgent();
+
+        $credentials = $this->authService->handleGoogleLogin($code, $userAgent);
         $accessToken = $credentials['access_token'];
         $refreshToken = $credentials['refresh_token'];
 

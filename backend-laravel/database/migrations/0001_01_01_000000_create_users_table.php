@@ -12,24 +12,25 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->uuid('user_id')->primary();
-            $table->string('provider_id')->nullable()->unique();
-            $table->string('username')->unique();
+            $table->uuid('id')->primary();
+            $table->string('name');
             $table->string('email')->unique();
-            $table->string('avatar')->nullable();
             $table->string('password')->nullable();
             $table->enum('role', ['user', 'admin'])->default('user');
+            $table->string('avatar')->nullable();
             $table->timestamps();
         });
 
         Schema::create('sessions', function (Blueprint $table) {
-            $table->uuid('session_id')->primary();
+            $table->uuid('id')->primary();
             $table->text('user_agent')->nullable();
-            $table->text('refresh_token')->nullable();
+            $table->text('ip')->nullable();
+            $table->text('refresh_token')->nullable()->unique();
             $table->bigInteger('last_login')->nullable();
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
 
-            $table->foreignUuid('user_id')->constrained('users', "user_id")->onDelete('cascade');
+            $table->foreignUuid('user_id')->constrained('users', "id")->onDelete('cascade');
         });
     }
 

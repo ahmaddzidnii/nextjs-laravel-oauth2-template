@@ -3,9 +3,10 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 use Illuminate\Support\Str;
 
@@ -14,13 +15,8 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-
-
-
     protected $keyType = 'string';
     public $incrementing = false;
-
-    protected $primaryKey = 'user_id';
 
     /**
      * The attributes that are mass assignable.
@@ -28,8 +24,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'provider_id',
-        'username',
+        'name',
         'email',
         'password',
         'role',
@@ -62,14 +57,19 @@ class User extends Authenticatable
         parent::boot();
 
         static::creating(function ($model) {
-            if (empty($model->user_id)) {
-                $model->user_id = (string) Str::uuid();
+            if (empty($model->id)) {
+                $model->id = (string) Str::uuid();
             }
         });
     }
 
-    public function sessions()
+    public function sessions(): HasMany
     {
-        return $this->hasMany(Session::class, 'user_id', 'user_id');
+        return $this->hasMany(Session::class, 'user_id');
+    }
+
+    public function accounts(): HasMany
+    {
+        return $this->hasMany(Account::class, 'user_id');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Exceptions\AuthException;
 use Illuminate\Http\Request;
 use App\Services\AuthService;
 use App\Traits\ApiResponseHelper;
@@ -15,13 +16,22 @@ class TokenController extends Controller
 
     public function refresh(Request $request)
     {
-        $tokens = $this->authService->handleRefreshToken($request);
-        $newAccessTokenCookie = cookie(name: 'access_token', value: $tokens['access_token'], secure: env("APP_ENV") != "local", httpOnly: false);
-        return $this->successResponse([
-            'access_token' => $tokens['access_token'],
-        ])->withCookie($newAccessTokenCookie);
-    }
+        // Get refresh token from cookie, bearer token, or query string
+        $refreshToken = $request->cookie('refresh_token') ?? $request->bearerToken() ?? $request->query('refresh_token');
 
+        if (!$refreshToken) {
+            throw new AuthException("Token is not given", 401);
+        }
+
+        $data = $this->authService->refreshAccessToken($refreshToken);
+        $newAccessTokenCookie = cookie(
+            name: 'access_token',
+            value: $data['access_token'],
+            secure: env("APP_ENV") != "local",
+            httpOnly: false
+        );
+        return $this->successResponse($data)->withCookie($newAccessTokenCookie);
+    }
 
     public function logout(Request $request)
     {

@@ -6,7 +6,7 @@ use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Session extends Model
+class Account extends Model
 {
     protected $keyType = 'string';
     public $incrementing = false;
@@ -16,19 +16,18 @@ class Session extends Model
      *
      * @var list<string>
      */
+
     protected $fillable = [
+        'provider',
         'user_id',
-        'user_agent',
-        'ip',
+        'provider_id',
         'refresh_token',
-        'last_login',
-        'is_active',
+        'expires_at',
     ];
 
     protected static function boot()
     {
         parent::boot();
-
         static::creating(function ($model) {
             if (empty($model->id)) {
                 $model->id = (string) Str::uuid();

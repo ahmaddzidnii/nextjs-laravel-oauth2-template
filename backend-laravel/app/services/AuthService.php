@@ -11,94 +11,188 @@ use Illuminate\Http\Request;
 use App\Models\BlacklistedToken;
 use App\Exceptions\AuthException;
 use App\Helpers\GoogleOAuthHelper;
-use App\Http\Requests\Auth\GoogleCallbackRequest;
+use App\ProviderEnum;
+use App\Repositories\AccountRepository;
+use App\Repositories\SessionRepository;
 use App\Repositories\TokenRepository;
+use App\Repositories\UserRepository;
+use Illuminate\Support\Facades\DB;
 
 class AuthService
 {
-    public function __construct(protected JwtHelpers $jwtHelpers, protected TokenRepository $tokenRepository) {}
+    public function __construct(
+        protected JwtHelpers $jwtHelpers,
+        protected TokenRepository $tokenRepository,
+        protected UserRepository $userRepository,
+        protected SessionRepository $sessionRepository,
+        protected AccountRepository $accountRepository
+    ) {}
 
-    public function handleGoogleLogin(GoogleCallbackRequest $request)
+    public function handleGoogleLogin(string $code, string $userAgent)
     {
+        DB::beginTransaction();
+        try {
+            $tokens = GoogleOAuthHelper::exchangeCode($code);
+            $userInfo = GoogleOAuthHelper::getUserInfo($tokens['access_token']);
 
-        $code = $request->validated()['code'];
-        $user_agent = $request->userAgent();
+            // $user = $this->userRepository->findOrCreateByGoogleUser($userInfo);
 
-        $tokens = GoogleOAuthHelper::exchangeCode($code);
-        $userInfo = GoogleOAuthHelper::getUserInfo($tokens['access_token']);
+            // Check if account already exists
+            $existingAccount = $this->accountRepository->findByProviderId($userInfo['id'], 'google');
 
-        $user = User::firstOrCreate(
-            ['provider_id' => $userInfo['id']],
-            [
-                'provider_id' => $userInfo['id'],
-                'username' => $userInfo['name'],
-                'email' => $userInfo['email'],
-                'avatar' => $userInfo['picture'],
-                'role' => 'user',
-            ]
-        );
+            if ($existingAccount) {
+                $user = $existingAccount->user;
+            } else {
+                // Check if user email already exists
+                $user = $this->userRepository->findByEmail($userInfo['email']);
 
-        $accessToken = $this->jwtHelpers->createToken($user, Carbon::now()->addMinutes((int) env('JWT_ACCESS_TOKEN_EXPIRATION'))->timestamp);
-        $refreshToken = $this->jwtHelpers->createToken($user, Carbon::now()->addMinutes((int) env('JWT_REFRESH_TOKEN_EXPIRATION'))->timestamp);
+                if (!$user) {
+                    // Create new user if not exists
+                    $user = $this->userRepository->createUser([
+                        'name' => $userInfo['name'],
+                        'email' => $userInfo['email'],
+                        'avatar' => $userInfo['picture'],
+                        'role' => 'user',
+                    ]);
 
-        // Cek apakah session sudah ada
-        $existingSession = Session::where('user_id', $user->user_id)
-            ->where('user_agent', $user_agent)
-            ->first();
+                    // create new account linked to user
+                    $this->accountRepository->createAccount($user->id, ProviderEnum::GOOGLE, $userInfo['id'], $tokens['refresh_token'], $tokens['expires_in']);
+                }
+            }
 
-        if ($existingSession) {
-            // Update session yang sudah ada
-            $existingSession->update([
+            // Generate tokens
+            $accessToken = $this->jwtHelpers->createToken(
+                $user,
+                Carbon::now()->addMinutes((int) env('JWT_ACCESS_TOKEN_EXPIRATION'))->timestamp
+            );
+
+            $refreshToken = $this->jwtHelpers->createToken(
+                $user,
+                Carbon::now()->addMinutes((int) env('JWT_REFRESH_TOKEN_EXPIRATION'))->timestamp
+            );
+
+            // Check if there's an existing active session for this user agent
+            $existingSession = $this->sessionRepository->getSessionByUserAndAgent($user->id, $userAgent);
+
+            if ($existingSession) {
+                // Update existing session
+                $existingSession->update([
+                    'refresh_token' => $refreshToken,
+                    'last_login' => now()->timestamp,
+                    'ip' => request()->ip()
+                ]);
+            } else {
+                // Create new session
+                $this->sessionRepository->createNewSession(
+                    $user->id,
+                    $userAgent,
+                    $refreshToken
+                );
+            }
+
+            // Get all active sessions for response
+            $activeSessions = $this->sessionRepository->getActiveSessionsByUser($user->id);
+
+            DB::commit();
+
+            return [
+                'access_token' => $accessToken,
                 'refresh_token' => $refreshToken,
-                'last_login' => now()->getPreciseTimestamp(3),
-            ]);
-        } else {
-            // Buat session baru jika belum ada
-            Session::create([
-                'user_id' => $user->user_id,
-                'user_agent' => $user_agent,
-                'refresh_token' => $refreshToken,
-                'last_login' => now()->getPreciseTimestamp(3),
-            ]);
+                'active_sessions' => $activeSessions->map(function ($session) {
+                    return [
+                        'user_agent' => $session->user_agent,
+                        'last_login' => Carbon::createFromTimestampMs($session->last_login)->toDateTimeString(),
+                        'ip' => $session->ip
+                    ];
+                })
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
         }
-
-        return [
-            'access_token' => $accessToken,
-            'refresh_token' => $refreshToken,
-        ];
     }
 
-    public  function handleRefreshToken(Request $request)
+    public function revokeSession(int $userId, string $refreshToken)
     {
-        // Get refresh token from cookie, bearer token, or query string
-        $refreshToken = $request->cookie('refresh_token') ?? $request->bearerToken() ?? $request->query('refresh_token');
+        return DB::transaction(function () use ($userId, $refreshToken) {
+            return Session::where('user_id', $userId)
+                ->where('refresh_token', $refreshToken)
+                ->update([
+                    'is_active' => false,
+                    'updated_at' => now()
+                ]);
+        });
+    }
 
-        if (!$refreshToken) {
-            throw new AuthException("Token is not given", 401);
-        }
+    public function revokeAllSessions(int $userId, ?string $exceptRefreshToken = null)
+    {
+        return DB::transaction(function () use ($userId, $exceptRefreshToken) {
+            $query = Session::where('user_id', $userId)
+                ->where('is_active', true);
 
+            if ($exceptRefreshToken) {
+                $query->where('refresh_token', '!=', $exceptRefreshToken);
+            }
+
+            return $query->update([
+                'is_active' => false,
+                'updated_at' => now()
+            ]);
+        });
+    }
+
+    public  function refreshAccessToken(string $refreshToken)
+    {
         try {
             $this->jwtHelpers->validateToken($refreshToken);
         } catch (\Exception $e) {
             throw new AuthException($e->getMessage(), 401);
         }
 
-        // Check user refresh token in database
-        $user = User::whereHas('sessions', function ($query) use ($refreshToken) {
-            $query->where('refresh_token', $refreshToken);
-        })->first();
+        DB::beginTransaction();
+        try {
+            // Check user refresh token in database
+            $session = $this->sessionRepository->findActiveSessionByRefreshToken($refreshToken);
 
-        if (!$user) {
-            throw new AuthException("Token is not valid", 401);
+            if (!$session) {
+                throw new AuthException("Invalid refresh token or session expired", 401);
+            }
+
+            $user = $session->user;
+
+            if (!$user) {
+                throw new AuthException("User not found", 404);
+            }
+
+            // Generate new access token
+            $accessTokenExpiresIn = Carbon::now()
+                ->addMinutes((int) env('JWT_ACCESS_TOKEN_EXPIRATION'))
+                ->timestamp;
+
+            $newAccessToken = $this->jwtHelpers->createToken($user, $accessTokenExpiresIn);
+
+            // Update session last activity
+            $session->update([
+                'last_login' => now()->timestamp,
+                'updated_at' => now()
+            ]);
+
+            DB::commit();
+
+            $accessTokenExpiresIn = Carbon::now()->addMinutes((int) env('JWT_ACCESS_TOKEN_EXPIRATION'))->timestamp;
+
+            return [
+                'access_token' => $newAccessToken,
+                'session_info' => [
+                    'last_login' => Carbon::createFromTimestamp($session->last_login, config('app.timezone'))->toDateTimeString(),
+                    'user_agent' => $session->user_agent,
+                    'ip' => $session->ip
+                ]
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
         }
-
-        $accessTokenExpiresIn = Carbon::now()->addMinutes((int) env('JWT_ACCESS_TOKEN_EXPIRATION'))->timestamp;
-
-        $newAccessToken = $this->jwtHelpers->createToken($user, $accessTokenExpiresIn);
-
-        return [
-            'access_token' => $newAccessToken,
-        ];
     }
 
     public function handleLogout(Request $request)
