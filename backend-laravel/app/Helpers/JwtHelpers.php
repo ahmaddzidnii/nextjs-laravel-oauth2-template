@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class JwtHelpers
 {
@@ -24,10 +25,12 @@ class JwtHelpers
     public function createToken($user, $expiresIn = null)
     {
         $issued_at = Carbon::now()->timestamp;
+        $jti = Str::uuid()->toString();
 
         $payload = [
             'iss' => $this->configJwt['issuser'],
             'iat' => $issued_at,
+            'jti' => $jti,
             'exp' => $expiresIn ?? $this->configJwt['defaultJwtExpiration'],
             'sub' => $user['id'],
             'username' => $user['name'],

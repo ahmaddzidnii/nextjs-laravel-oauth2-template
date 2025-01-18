@@ -23,7 +23,7 @@ class BlacklistedToken extends Model
     }
 
     protected $fillable = [
-        'token',
+        'jti',
         'expires_at',
     ];
 }

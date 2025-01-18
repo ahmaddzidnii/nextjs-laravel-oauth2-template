@@ -13,18 +13,29 @@ class TokenRepository
 
     public function blacklistToken($token)
     {
-        $decodedToken = null;
-
         try {
             $decodedToken = $this->jwtHelpers->validateToken($token)['decoded'];
+            $jti = $decodedToken->jti;
         } catch (\Throwable $th) {
             throw new AuthException();
         }
 
         $expiresAt = Carbon::createFromTimestamp($decodedToken->exp, config('app.timezone'));
         BlacklistedToken::create([
-            'token' => $token,
+            'jti' => $jti,
             'expires_at' => $expiresAt,
         ]);
+    }
+
+    public function isTokenBlacklisted($token)
+    {
+        try {
+            $decodedToken = $this->jwtHelpers->validateToken($token)['decoded'];
+            $jti = $decodedToken->jti;
+        } catch (\Throwable $th) {
+            throw new AuthException();
+        }
+
+        return BlacklistedToken::where('jti', $jti)->exists();
     }
 }

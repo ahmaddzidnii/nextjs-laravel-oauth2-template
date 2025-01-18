@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Exceptions\AuthException;
 use App\Helpers\JwtHelpers;
+use App\Repositories\TokenRepository;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -11,7 +12,10 @@ use Symfony\Component\HttpFoundation\Response;
 class AuthMiddleware
 {
 
-    public function __construct(protected readonly JwtHelpers $jwtHelpers) {}
+    public function __construct(
+        protected readonly JwtHelpers $jwtHelpers,
+        protected readonly TokenRepository $tokenRepository
+    ) {}
 
     /**
      * Handle an incoming request.
@@ -22,7 +26,7 @@ class AuthMiddleware
     {
 
         // Get refresh token from cookie, bearer token, or query string
-        $accsessToken = $request->cookie('refresh_token') ?? $request->bearerToken() ?? $request->query('refresh_token');
+        $accsessToken = $request->cookie('refresh_token') ?? $request->bearerToken() ?? $request->query('access_token');
 
         if (!$accsessToken) {
             throw new AuthException();
@@ -32,6 +36,11 @@ class AuthMiddleware
             $validatedToken = $this->jwtHelpers->validateToken($accsessToken);
         } catch (\Exception $e) {
             throw new AuthException($e->getMessage());
+        }
+
+        // Check if token is blacklisted
+        if ($this->tokenRepository->isTokenBlacklisted($accsessToken)) {
+            throw new AuthException();
         }
 
         $request->attributes->add(['user' => $validatedToken['decoded']]);
