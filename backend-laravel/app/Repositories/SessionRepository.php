@@ -12,7 +12,7 @@ class SessionRepository
             'user_id' => $userId,
             'user_agent' => $userAgent,
             'refresh_token' => $refreshToken,
-            'last_login' => now()->getPreciseTimestamp(3),
+            'last_login' => now()->timestamp,
             'is_active' => true,
             'ip' => request()->ip(), // Adding IP tracking
             'created_at' => now(),
@@ -40,5 +40,10 @@ class SessionRepository
         return Session::where('refresh_token', $refreshToken)
             ->where('is_active', true)
             ->first();
+    }
+
+    public function deleteSessionByRefreshToken(string $refreshToken)
+    {
+        return Session::where('refresh_token', $refreshToken)->delete();
     }
 }

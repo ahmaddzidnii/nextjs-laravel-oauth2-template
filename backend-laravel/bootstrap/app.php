@@ -30,7 +30,30 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
 
-        $exceptions->render(function (\RuntimeException | ErrorException $e, Request $request) {
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return (new class {
+                    use ApiResponseHelper;
+                })->errorResponse('Route not found.', 404);
+            }
+        });
+
+        $exceptions->render(function (MethodNotAllowedHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return (new class {
+                    use ApiResponseHelper;
+                })->errorResponse('Method not allowed.', 405);
+            }
+        });
+
+        $exceptions->render(function (TooManyRequestsHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return (new class {
+                    use ApiResponseHelper;
+                })->errorResponse("Too many request, please slow down", 429);
+            }
+        });
+        $exceptions->render(function (\RuntimeException $e, Request $request) {
 
             Log::debug($e->getMessage(), [
                 'context' => [
@@ -97,31 +120,6 @@ return Application::configure(basePath: dirname(__DIR__))
                 return (new class {
                     use ApiResponseHelper;
                 })->errorResponse("Internal Server Error", 500);
-            }
-        });
-
-
-        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
-            if ($request->is('api/*')) {
-                return (new class {
-                    use ApiResponseHelper;
-                })->errorResponse('Route not found.', 404);
-            }
-        });
-
-        $exceptions->render(function (MethodNotAllowedHttpException $e, Request $request) {
-            if ($request->is('api/*')) {
-                return (new class {
-                    use ApiResponseHelper;
-                })->errorResponse('Method not allowed.', 405);
-            }
-        });
-
-        $exceptions->render(function (TooManyRequestsHttpException $e, Request $request) {
-            if ($request->is('api/*')) {
-                return (new class {
-                    use ApiResponseHelper;
-                })->errorResponse("Too many request, please slow down", 429);
             }
         });
     })->create();

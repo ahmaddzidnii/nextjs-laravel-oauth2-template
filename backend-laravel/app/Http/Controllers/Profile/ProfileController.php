@@ -15,7 +15,7 @@ class ProfileController extends Controller
 
     public function me(Request $request)
     {
-        $user = $this->authService->handleGetMe($request);
+        $user = $request->attributes->get('user');
         return $this->successResponse($user);
     }
 }

@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
-use App\Enums\ProviderEnum;
 use Exception;
 use Carbon\Carbon;
 use App\Models\User;
 use App\Models\Session;
+use App\Enums\ProviderEnum;
 use App\Helpers\JwtHelpers;
 use Illuminate\Http\Request;
 use App\Models\BlacklistedToken;
@@ -35,8 +35,6 @@ class AuthService
             $tokens = GoogleOAuthHelper::exchangeCode($code);
             $userInfo = GoogleOAuthHelper::getUserInfo($tokens['access_token']);
 
-            // $user = $this->userRepository->findOrCreateByGoogleUser($userInfo);
-
             // Check if account already exists
             $existingAccount = $this->accountRepository->findByProviderId($userInfo['id'], 'google');
 
@@ -56,7 +54,7 @@ class AuthService
                     ]);
 
                     // create new account linked to user
-                    $this->accountRepository->createAccount($user->id, ProviderEnum::GOOGLE, $userInfo['id'], $tokens['refresh_token'], $tokens['expires_in']);
+                    $this->accountRepository->createAccount($user->id, ProviderEnum::GOOGLE, $userInfo['id']);
                 }
             }
 
@@ -122,6 +120,23 @@ class AuthService
                     'updated_at' => now()
                 ]);
         });
+    }
+
+    public function handleLogout(string $accessToken, string $refreshToken)
+    {
+        DB::beginTransaction();
+        try {
+            $this->tokenRepository->blacklistToken($accessToken);
+            $this->tokenRepository->blacklistToken($refreshToken);
+
+            $this->sessionRepository->deleteSessionByRefreshToken($refreshToken);
+            DB::commit();
+
+            return true;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 
     public function revokeAllSessions(int $userId, ?string $exceptRefreshToken = null)
@@ -193,59 +208,5 @@ class AuthService
             DB::rollBack();
             throw $e;
         }
-    }
-
-    public function handleLogout(Request $request)
-    {
-        $refreshToken = $request->cookie('refresh_token') ?? $request->bearerToken() ?? $request->query('refresh_token');
-        $accessToken = $request->bearerToken() ?? $request->query('access_token') ?? $request->cookie('access_token');
-        if (!$refreshToken) {
-            throw new Exception("Token is not given", 401);
-        }
-        try {
-            $this->jwtHelpers->validateToken($refreshToken);
-            $this->jwtHelpers->validateToken($accessToken);
-        } catch (\Exception $e) {
-            throw new AuthException($e->getMessage());
-        }
-
-        $this->tokenRepository->blacklistToken($accessToken);
-
-        $user = User::whereHas('sessions', function ($query) use ($refreshToken) {
-            $query->where('refresh_token', $refreshToken);
-        })->first();
-
-        if (!$user) {
-            throw new AuthException("Token is not valid");
-        }
-
-        $user->sessions()->where('refresh_token', $refreshToken)->delete();
-    }
-
-    public function handleGetMe(Request $request)
-    {
-        $accessToken = $request->bearerToken() ?? $request->query('access_token') ?? $request->cookie('access_token');
-
-        if (!$accessToken) {
-            throw new AuthException("Token is not given");
-        }
-
-        $isBlacklisted = BlacklistedToken::where('token', $accessToken)->exists();
-
-        if ($isBlacklisted) {
-            throw new AuthException("Token is not valid");
-        }
-
-        $user = $request->attributes->get('user');
-
-        $responseUser = [
-            'user_id' => $user->sub,
-            'username' => $user->username,
-            'email' => $user->email,
-            'avatar' => $user->avatar,
-            'role' => $user->role,
-        ];
-
-        return $responseUser;
     }
 }

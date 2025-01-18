@@ -7,14 +7,12 @@ use App\Models\Account;
 
 class AccountRepository
 {
-    public function createAccount(string $user_id, ProviderEnum $provider, string $providerId, string $refreshToken, int $expiresIn): Account
+    public function createAccount(string $user_id, ProviderEnum $provider, string $providerId): Account
     {
         return Account::create([
             'user_id' => $user_id,
             'provider' => $provider,
             'provider_id' => $providerId,
-            'refresh_token' => $refreshToken,
-            'expires_at' => now()->addSeconds($expiresIn)
         ]);
     }
 

@@ -21,10 +21,10 @@ class TokenRepository
             throw new AuthException();
         }
 
-        $expiresAt = Carbon::createFromTimestamp($decodedToken->exp);
-        $blacklistToken = new BlacklistedToken();
-        $blacklistToken->token = $token;
-        $blacklistToken->expires_at = $expiresAt;
-        $blacklistToken->save();
+        $expiresAt = Carbon::createFromTimestamp($decodedToken->exp, config('app.timezone'));
+        BlacklistedToken::create([
+            'token' => $token,
+            'expires_at' => $expiresAt,
+        ]);
     }
 }
