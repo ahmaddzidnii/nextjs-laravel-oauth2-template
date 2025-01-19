@@ -2,14 +2,7 @@ import "server-only";
 
 import * as jose from "jose";
 import { cookies } from "next/headers";
-
-interface AuthUser {
-  id: string;
-  username: string;
-  email: string;
-  avatar: string;
-  role: string;
-}
+import { AuthUser } from "@/types";
 
 type AuthObject = {
   isAuthenticated: boolean;
@@ -73,7 +66,7 @@ export async function getAuth(): Promise<AuthObject> {
 
         return createAuthObject(true, {
           id: payload.sub as string,
-          username: payload.username as string,
+          name: payload.username as string,
           email: payload.email as string,
           avatar: payload.avatar as string,
           role: payload.role as string,
@@ -94,7 +87,7 @@ export async function getAuth(): Promise<AuthObject> {
 
       return createAuthObject(true, {
         id: payload.sub as string,
-        username: payload.username as string,
+        name: payload.username as string,
         email: payload.email as string,
         avatar: payload.avatar as string,
         role: payload.role as string,
@@ -115,7 +108,7 @@ export async function getAuth(): Promise<AuthObject> {
 
           return createAuthObject(true, {
             id: payload.sub as string,
-            username: payload.username as string,
+            name: payload.username as string,
             email: payload.email as string,
             avatar: payload.avatar as string,
             role: payload.role as string,

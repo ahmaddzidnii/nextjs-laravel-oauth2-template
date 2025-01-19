@@ -1,13 +1,6 @@
+import { AuthUser } from "@/types";
 import * as jose from "jose";
 import { NextRequest, NextResponse } from "next/server";
-
-interface AuthUser {
-  id: string;
-  username: string;
-  email: string;
-  avatar: string;
-  role: string;
-}
 
 interface AuthObject {
   isAuthenticated: boolean;
@@ -71,7 +64,7 @@ export function authMiddleware(callback: MiddlewareCallback) {
           const result = await callback(
             createAuthObject(true, {
               id: payload.sub as string,
-              username: payload.username as string,
+              name: payload.name as string,
               email: payload.email as string,
               avatar: payload.avatar as string,
               role: payload.role as string,
@@ -114,7 +107,7 @@ export function authMiddleware(callback: MiddlewareCallback) {
         return callback(
           createAuthObject(true, {
             id: payload.sub as string,
-            username: payload.username as string,
+            name: payload.name as string,
             email: payload.email as string,
             avatar: payload.avatar as string,
             role: payload.role as string,
@@ -148,7 +141,7 @@ export function authMiddleware(callback: MiddlewareCallback) {
             const result = await callback(
               createAuthObject(true, {
                 id: payload.sub as string,
-                username: payload.username as string,
+                name: payload.name as string,
                 email: payload.email as string,
                 avatar: payload.avatar as string,
                 role: payload.role as string,

@@ -29,7 +29,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${poppins.className} antialiased`}>
         <TanstackProvider>
-          <GoogleOAuthProvider clientId="941907082804-lb0uklitrosgfoi6phd3jrtpurrciqng.apps.googleusercontent.com">
+          <GoogleOAuthProvider clientId="941907082804-4j59igvjeps6fgagur3m47okvngr28lu.apps.googleusercontent.com">
             <AuthContextProvider>
               <div className="container mx-auto px-4">{children}</div>
               {process.env.NODE_ENV === "development" && (

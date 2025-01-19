@@ -30,7 +30,7 @@ export const ClientSideAuth = () => {
   dark:[&::-webkit-scrollbar-track]:bg-neutral-700
   dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500 pb-5"
       >
-        {JSON.stringify({ isAuthenticated, accsessToken: getAccessToken(), user }, null, 2)}
+        {JSON.stringify({ isAuthenticated, user }, null, 2)}
       </pre>
       <div className="mt-5">
         {isAuthenticated ? (

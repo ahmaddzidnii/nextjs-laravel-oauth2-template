@@ -31,19 +31,24 @@ api.interceptors.response.use(
   (response) => response, // Pass through successful responses
   async (error) => {
     const originalRequest = error.config;
+    const refreshToken = getCookie("refresh_token");
+    if (refreshToken) {
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true; // Mark this request as retried
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true; // Mark this request as retried
-
-      try {
-        const newAccessToken = await refreshAccessToken();
-        originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
-        return api(originalRequest); // Retry the original request with the new token
-      } catch (refreshError) {
-        console.error("Refresh token failed", refreshError);
-        deleteCookie("access_token");
-        throw refreshError;
+        try {
+          const newAccessToken = await refreshAccessToken();
+          originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
+          return api(originalRequest); // Retry the original request with the new token
+        } catch (refreshError) {
+          console.error("Refresh token failed", refreshError);
+          deleteCookie("access_token");
+          return Promise.reject(refreshError);
+        }
       }
+    } else {
+      deleteCookie("access_token");
+      deleteCookie("refresh_token");
     }
 
     return Promise.reject(error);

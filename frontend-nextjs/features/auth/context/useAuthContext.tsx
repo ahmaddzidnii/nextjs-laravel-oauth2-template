@@ -19,11 +19,10 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
   const { data, isLoading, isSuccess, isError, error } = useQuery({
     queryKey: ["user"],
     queryFn: async () => {
-      return api.get("/profile/me");
+      return api.get("/users");
     },
-    enabled: !!token,
+    refetchOnWindowFocus: false,
     retry: false,
-    refetchInterval: 1000 * 60 * 0.5, // Refetch every 30 seconds
   });
 
   useEffect(() => {
@@ -35,8 +34,6 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
 
       if (isError) {
         setIsAuthenticated(false);
-        // deleteCookie("access_token");
-        // window.location.reload();
         return;
       }
 
@@ -49,8 +46,8 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
   }, [token, isSuccess, isError, data?.data.data]);
 
   const user: AuthUser = {
-    id: data?.data.data?.user_id,
-    username: data?.data.data?.username,
+    id: data?.data.data?.id,
+    name: data?.data.data?.name,
     email: data?.data.data?.email,
     avatar: data?.data.data?.avatar,
     role: data?.data.data?.role,
