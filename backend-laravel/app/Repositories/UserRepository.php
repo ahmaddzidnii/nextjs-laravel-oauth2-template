@@ -6,6 +6,11 @@ use App\Models\User;
 
 class UserRepository
 {
+    public function findById(string $id): ?User
+    {
+        return User::find($id);
+    }
+
     public function findOrCreateByGoogleUser(array $userInfo): User
     {
         return User::firstOrCreate(

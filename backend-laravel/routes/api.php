@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\Auth\Oauth\GoogleController;
 use App\Http\Controllers\Auth\TokenController;
-use App\Http\Controllers\Profile\ProfileController;
+use App\Http\Controllers\Common\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -77,15 +77,14 @@ Route::group(['middleware' => 'throttle:api'], function () {
     Route::group([
         'middleware' => 'jwt.middleware'
     ], function () {
-        // User Profile Routes
+        // Users
         Route::group([
-            'prefix' => 'profile',
-            'as' => 'profile.'
+            'prefix' => 'users',
+            'as' => 'users.'
         ], function () {
-            Route::get('me', [ProfileController::class, 'me'])->name('me');
-            // Route::get('/', [ProfileController::class, 'show'])->name('show');
-            // Route::put('/', [ProfileController::class, 'update'])->name('update');
+            Route::get('/', [UserController::class, 'users']);
         });
+
 
         // Example Resource Routes Structure
         /*

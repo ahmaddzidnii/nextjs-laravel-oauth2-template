@@ -33,10 +33,10 @@ class JwtHelpers
             'jti' => $jti,
             'exp' => $expiresIn ?? $this->configJwt['defaultJwtExpiration'],
             'sub' => $user['id'],
-            'username' => $user['name'],
+            // 'username' => $user['name'],
             'email' => $user['email'],
-            'role' => $user['role'],
-            'avatar' => $user['avatar'],
+            // 'role' => $user['role'],
+            // 'avatar' => $user['avatar'],
         ];
 
 
