@@ -7,8 +7,6 @@ export interface AuthUser {
 }
 
 export interface AuthContextType {
-  isLoading: boolean;
-  user: AuthUser | null;
   isAuthenticated: boolean;
   getAccessToken: () => string | null;
   setToken: (token: string) => void;

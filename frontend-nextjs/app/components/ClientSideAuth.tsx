@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useUser } from "@/features/auth/hooks/useUser";
 
 export const ClientSideAuth = () => {
   const [isClient, setIsClient] = useState(false);
-  const { isAuthenticated, isLoading, user, getAccessToken } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const { user, isLoading } = useUser();
 
   useEffect(() => {
     setIsClient(true);
