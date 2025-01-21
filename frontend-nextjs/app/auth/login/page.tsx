@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { Metadata } from "next";
+
 import { Card } from "@/components/ui/card";
 import LoginForm from "@/features/auth/components/LoginForm";
 import SocialLoginComponent from "@/features/auth/components/SocialLoginComponent";
-import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Login Page",

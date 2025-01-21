@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "sonner";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGoogleLogin } from "@react-oauth/google";
@@ -16,6 +17,7 @@ export function useLoginWithGoogle() {
     flow: "auth-code",
     onError: (error) => {
       console.error("Google login error:", error);
+      toast.error("Failed to login with Google");
     },
     onSuccess: async ({ code }) => {
       try {
@@ -30,10 +32,11 @@ export function useLoginWithGoogle() {
         });
         setIsLoadingLogin(false);
         setToken(response.data.data.access_token);
-        router.replace(process.env.NEXT_PUBLIC_DEFAULT_REDIRECT_AFTER_LOGIN ?? "/dashboard");
+        router.refresh();
       } catch (error) {
         setIsLoadingLogin(false);
         console.error("Failed to login with Google:", error);
+        toast.error("Failed to login with Google");
       }
     },
   });

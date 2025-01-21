@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "sonner";
 import { useState } from "react";
 import { getCookie } from "cookies-next";
 import { useRouter } from "next/navigation";
@@ -25,11 +26,12 @@ export function useLogout() {
         queryClient.removeQueries({
           queryKey: ["user"],
         });
-        router.replace(process.env.NEZT_PUBLIC_DEFAULT_REDIRECT_AFTER_LOGOUT ?? "/login");
+        router.refresh();
       })
       .catch((error) => {
         setIsLoadingLogout(false);
         console.error("Failed to logout:", error);
+        toast.error("Failed to logout");
         onError?.(error);
       });
   };

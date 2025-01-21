@@ -6,6 +6,7 @@ import { TanstackProvider } from "@/providers/TanstackProvider";
 import { AuthContextProvider } from "@/features/auth/context/useAuthContext";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { Toaster } from "@/components/ui/sonner";
 
 const poppins = Poppins({
   weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
@@ -31,6 +32,7 @@ export default function RootLayout({
         <TanstackProvider>
           <GoogleOAuthProvider clientId="941907082804-4j59igvjeps6fgagur3m47okvngr28lu.apps.googleusercontent.com">
             <AuthContextProvider>
+              <Toaster />
               <div className="container mx-auto px-4">{children}</div>
             </AuthContextProvider>
           </GoogleOAuthProvider>
