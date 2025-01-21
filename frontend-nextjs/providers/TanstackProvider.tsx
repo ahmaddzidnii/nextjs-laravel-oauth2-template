@@ -1,8 +1,9 @@
 // app/providers.tsx
 "use client";
 
-import { isServer, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { isServer, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 function makeQueryClient() {
   return new QueryClient({
@@ -39,5 +40,10 @@ export function TanstackProvider(props: { children: React.ReactNode }) {
   //       render if it suspends and there is no boundary
   const queryClient = getQueryClient();
 
-  return <QueryClientProvider client={queryClient}>{props.children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      {props.children}{" "}
+      {process.env.NODE_ENV === "development" && <ReactQueryDevtools initialIsOpen={false} />}
+    </QueryClientProvider>
+  );
 }

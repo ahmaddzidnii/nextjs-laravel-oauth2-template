@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const { isAuthenticated, user, getAccessToken } = await getAuth();
+  const { isAuthenticated, user } = await getAuth();
   return (
     <div className="w-full space-y-5 min-h-screen flex-col items-center justify-center">
       <header className="relative overflow-hidden bg-gradient-to-r from-slate-100 to-slate-200">

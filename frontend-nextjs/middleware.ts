@@ -4,7 +4,7 @@ import { authMiddleware } from "@/helpers/authMiddleware";
 import { createRouteMatcher } from "./helpers/createRouteMatcher";
 
 export default authMiddleware(async (auth, req) => {
-  const isPublicRoutes = createRouteMatcher(["/", "/login(.*)", "/api/auth(.*)"]);
+  const isPublicRoutes = createRouteMatcher(["/", "/auth(.*)", "/api/auth(.*)"]);
   const isAuthRoutes = createRouteMatcher(["/login(.*)"]);
 
   if (!auth.isAuthenticated && !isPublicRoutes(req)) {
