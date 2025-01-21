@@ -27,5 +27,5 @@ export const useUser = () => {
     role: data?.role as string,
   };
 
-  return { user: user ?? null, isLoading, isError, error };
+  return { user: data ? user : null, isLoading, isError, error };
 };
