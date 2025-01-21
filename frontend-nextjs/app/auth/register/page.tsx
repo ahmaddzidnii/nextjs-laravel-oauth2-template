@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 
 import { Card } from "@/components/ui/card";
-import LoginForm from "@/features/auth/components/LoginForm";
+import RegisterForm from "@/features/auth/components/RegisterForm";
 import SocialLoginComponent from "@/features/auth/components/SocialLoginComponent";
 
 export const metadata: Metadata = {
@@ -10,14 +10,14 @@ export const metadata: Metadata = {
   abstract: "Login page for Next.js + Laravel Oauth2",
 };
 
-export default function LoginPage() {
+export default function RegisterPage() {
   return (
     <div className=" w-full h-screen flex justify-center items-center">
       <Card className="w-full max-w-screen-lg overflow-hidden rounded-[25px]">
-        <div className="grid grid-cols-12 md:h-[550px]">
+        <div className="grid grid-cols-12 md:-min-h-[550px]">
           <div className="col-span-12 md:col-span-7 px-12 py-6 flex flex-col gap-5 justify-center items-center">
-            <h1 className="text-2xl font-bold">Sign in to your Account</h1>
-            <LoginForm />
+            <h1 className="text-2xl font-bold text-center">Create an account in this app</h1>
+            <RegisterForm />
             <div className="flex items-center justify-center w-full space-x-4">
               <div className="flex-grow h-[1px] bg-gray-300"></div>
               <span className="text-gray-500 text-sm">or continue with</span>
@@ -25,12 +25,12 @@ export default function LoginPage() {
             </div>
             <SocialLoginComponent />
             <p className="text-sm">
-              Don't have any account? &nbsp;
+              Already have an account? &nbsp;
               <Link
                 className=" text-primary font-bold"
-                href="/auth/register"
+                href="/auth/login"
               >
-                Register
+                Login
               </Link>
             </p>
           </div>

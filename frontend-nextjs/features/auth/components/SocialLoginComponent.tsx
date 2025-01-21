@@ -19,7 +19,7 @@ const SocialLoginComponent = () => {
         <div className="bg-cover bg-center bg-[url('/img/google.png')] size-6" />
       </button>
       <button
-        disabled={isLoadingLogin}
+        disabled={true}
         className="w-full border rounded-sm p-3 flex items-center justify-center hover:bg-gray-100 hover:scale-105 transition-all disabled:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-70"
       >
         <div className="bg-cover bg-center bg-[url('/img/github.png')] size-6" />
