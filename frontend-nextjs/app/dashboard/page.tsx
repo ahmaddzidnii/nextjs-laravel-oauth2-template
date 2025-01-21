@@ -9,7 +9,7 @@ export default async function Dashboard() {
       <img
         className="rounded-md"
         src={auth?.user?.avatar}
-        alt={auth?.user?.username}
+        alt={auth?.user?.name}
       />
       <LogoutButton />
     </div>
