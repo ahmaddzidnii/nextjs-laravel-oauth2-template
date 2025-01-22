@@ -26,7 +26,9 @@ const FormSchema = z
     password: z.string().min(8, {
       message: "Password must be at least 8 characters.",
     }),
-    confirmPassword: z.string(),
+    confirmPassword: z.string().min(8, {
+      message: "Password must be at least 8 characters.",
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     path: ["confirmPassword"], // Specify which field the error belongs to
@@ -40,6 +42,7 @@ export default function RegisterForm() {
       name: "",
       email: "",
       password: "",
+      confirmPassword: "",
     },
   });
 
@@ -51,7 +54,7 @@ export default function RegisterForm() {
     <ShadcnForm {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="w-full space-y-6"
+        className="w-full space-y-4"
       >
         <FormField
           control={form.control}
@@ -125,7 +128,7 @@ export default function RegisterForm() {
           className="w-full"
           type="submit"
         >
-          Login
+          Register
         </Button>
       </form>
     </ShadcnForm>

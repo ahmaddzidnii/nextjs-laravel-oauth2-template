@@ -14,7 +14,7 @@ export default function RegisterPage() {
   return (
     <div className=" w-full h-screen flex justify-center items-center">
       <Card className="w-full max-w-screen-lg overflow-hidden rounded-[25px]">
-        <div className="grid grid-cols-12 md:-min-h-[550px]">
+        <div className="grid grid-cols-12 ">
           <div className="col-span-12 md:col-span-7 px-12 py-6 flex flex-col gap-5 justify-center items-center">
             <h1 className="text-2xl font-bold text-center">Create an account in this app</h1>
             <RegisterForm />
